@@ -71,15 +71,6 @@ episode_number = 0
 count = 0
 i = 0
 while True:
-  # i += 1
-  # if i % 100: render = True
-  # if render and count <= 20:
-  #     env.render()
-  #     count += 1
-  # else:
-  #     render = False
-  #     count = 0
-
   # preprocess the observation, set input to network to be difference image
   cur_x = prepro(observation)
   x = cur_x - prev_x if prev_x is not None else np.zeros(D)
