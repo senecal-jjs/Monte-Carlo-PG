@@ -12,7 +12,7 @@ class Agent():
 
         with tf.variable_scope('network'):
             # Store the state, and policy from the network:
-            self.state, self.policy = self.build_model(84, 84, 4)
+            self.state, self.policy = self.build_model(80, 80, 1)
 
             # Get the weights for the network
             self.weights = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='network')
@@ -40,17 +40,28 @@ class Agent():
             # to do the automatic differentiation for us.
             self.policy_loss = -tf.reduce_mean(self.log_pi_for_action * self.advantages)
 
-            # Compute the gradient of the loss with respect to all the weights,
-            # and create a list of tuples consisting of the gradient to apply to
-            # the weight.
-            grads = tf.gradients(self.policy_loss, self.weights)
-            grads, _ = tf.clip_by_global_norm(grads, 40.0)
-            grads_vars = list(zip(grads, self.weights))
+            tvars = tf.trainable_variables()
+            self.gradient_holders = []
+            for idx,var in enumerate(tvars):
+                placeholder = tf.placeholder(tf.float32,name=str(idx)+'_holder')
+                self.gradient_holders.append(placeholder)
 
-            # Create an operator to apply the gradients using the optimizer.
-            # Note that apply_gradients is the second part of minimize() for the
-            # optimizer, so will minimize the loss.
-            self.train_op = optimizer.apply_gradients(grads_vars)
+            self.gradients = tf.gradients(self.loss,tvars)
+
+            optimizer = tf.train.AdamOptimizer(learning_rate=lr)
+            self.train_op = optimizer.apply_gradients(zip(self.gradient_holders,tvars))
+
+            # # Compute the gradient of the loss with respect to all the weights,
+            # # and create a list of tuples consisting of the gradient to apply to
+            # # the weight.
+            # grads = tf.gradients(self.policy_loss, tvars)
+            # # grads, _ = tf.clip_by_global_norm(grads, 40.0)
+            # grads_vars = list(zip(grads, tvars))
+            #
+            # # Create an operator to apply the gradients using the optimizer.
+            # # Note that apply_gradients is the second part of minimize() for the
+            # # optimizer, so will minimize the loss.
+            # self.train_op = optimizer.apply_gradients(grads_vars)
 
     def build_model(self, h, w, channels):
           state = tf.placeholder('float32', shape=(None, h, w, channels), name='state')
@@ -94,8 +105,6 @@ class Agent():
         policy = self.sess.run(self.policy, {self.state: state})
         return policy.flatten()
 
-    def train(self, states, actions, advantages):
+    def train(self, feed_dict_in):
         # Training
-        self.sess.run(self.train_op, feed_dict={self.state: states,
-                                                self.action: actions,
-                                                self.advantages: advantages})
+        self.sess.run(self.train_op, feed_dict=feed_dict_in)
