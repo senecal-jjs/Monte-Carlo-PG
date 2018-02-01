@@ -68,8 +68,7 @@ xs,hs,dlogps,drs = [],[],[],[]
 running_reward = None
 reward_sum = 0
 episode_number = 0
-count = 0
-i = 0
+
 while True:
   if render: env.render()
   # preprocess the observation, set input to network to be difference image
