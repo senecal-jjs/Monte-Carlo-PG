@@ -18,65 +18,77 @@ def discount_rewards(r, gamma):
     return discounted_r
 
 def run(in_game):
-    discount_factor = 0.99
     env = CustomGym(game=in_game)
 
     with tf.Session() as sess:
         agent = Agent(session=sess, action_size = env.action_size)
         sess.run(tf.global_variables_initializer())
 
-        terminal = True
+        gradBuffer = sess.run(tf.trainable_variables())
+        for ix,grad in enumerate(gradBuffer):
+            gradBuffer[ix] = grad * 0
 
+        # Initialize environment
+        discount_factor = 0.99
+        prev_state = None # used in computing the difference frame
+        observation = env.reset()
+
+        # Track episode rewards and scores
+        batch_size = 10
         episode = 0
         reward_sum = 0
         last_50_scores = deque(maxlen=50)
+
+        # Track episode history
+        ep_history = []
+
         while True:
-            batch_states = []
-            batch_rewards = []
-            batch_actions = []
+            # Get the difference frame
+            state = observation - prev_state if prev_state is not None else np.zeros(D)
+            prev_state = observation
 
-            if terminal:
-                terminal = False
-                state = env.reset()
+            # Probabilistically pick an action given the policy network output
+            action_probabilities = agent.get_policy(state)
 
-            while not terminal:
-                # Save the current state
-                batch_states.append(state)
+            # Flip a biased coin to choose an action
+            action_index = np.random.choice(agent.action_size, p=action_probabilities)
 
-                # Flip a biased coin to choose an action according
-                # to the policy probabilities
-                policy = agent.get_policy(state)
-                action_index = np.random.choice(agent.action_size, p=policy)
+            # Take a step in the environment with the selected action
+            observation, reward, done, info = env.step(action_index)
 
-                # Peform the action, get the updated environment values
-                state, reward, terminal, _ = env.step(action_index)
+            # Save the episode history
+            ep_history.append([state, action_index, reward, observation])
 
-                # Clip the reward to be between -1 and 1
-                reward = np.clip(reward, -1, 1)
-                reward_sum += reward
+            # Add to the current score
+            reward_sum += reward
 
-                # Save the rewards and actions
-                batch_rewards.append(reward)
-                batch_actions.append(action_index)
+            if done:
+                episode += 1
 
-            # Calculate the sampled n-step discounted reward
-            batch_target_values = discount_rewards(np.stack(batch_rewards), discount_factor)
-            # target_value = 0
-            # batch_target_values = []
-            # for reward in reversed(batch_rewards):
-            #     target_value = reward + discount_factor * target_value
-            #     batch_target_values.append(target_value)
+                # Get the discounted rewards
+                ep_history = np.array(ep_history)
+                ep_history[:,2] = discount_rewards(ep_history[:,2], discount_factor)
 
-            # Reverse the batch target values so that they are in the correct order
-            # batch_target_values.reverse()
-            batch_target_values -= np.mean(batch_target_values)
-            batch_target_values /= np.std(batch_target_values)
+                # Prepare the info needed to calculate the gradients
+                feed_dict={agent.advantages: ep_history[:,2], agent.action: ep_history[:,1],
+                           agent.state: np.vstack(ep_history[:,0])}
 
-            agent.train(np.vstack(batch_states), batch_actions, batch_target_values)
-            print("Episode: {0}, Score: {1}, Running Avg: {2}".format(episode, reward_sum, np.mean(last_50_scores)))
-            last_50_scores.append(reward_sum)
-            reward_sum = 0
-            episode += 1
+                # Calculate the gradients and add to the gradient buffer
+                grads = sess.run(agent.gradients, feed_dict=feed_dict)
+                for idx,grad in enumerate(grads):
+                    gradBuffer[idx] += grad
+
+                # Perform a network parameter update every batch size episodes
+                if episode % batch_size == 0:
+                    feed_dict = dictionary = dict(zip(myAgent.gradient_holders, gradBuffer))
+                    _ = sess.run(agent.train_op, feed_dict=feed_dict)
+
+                # boring book-keeping
+                running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
+                print('resetting env. episode %d reward total was %f. running mean: %f' % (episode, reward_sum, running_reward))
+                reward_sum = 0
+                observation = env.reset() # reset env
+                prev_state = None
 
 
 if __name__ == '__main__':
