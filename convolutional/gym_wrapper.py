@@ -48,18 +48,20 @@ class CustomGym():
 
     def step(self, action_index):
         action = self.action_space[action_index]
-        accum_reward = 0
-        prev_state = None
-
-        for _ in range(self.skip_actions):
-            state, reward, terminal, _ = self.env.step(action)
-            accum_reward += reward
-            if terminal:
-                break
-            prev_state = state
-
-        # Takes maximum value for each pixel value over the current and previous
-        # frame. Used to handle flickering ATARI sprites Mnih et al. 2015
-        if self.game == 'SpaceInvaders-v0' and prev_state is not None:
-            s = np.maximum.reduce([state, prev_state])
-        return self.preprocess(state), accum_reward, terminal, _
+        state, reward, terminal, _ = self.env.step(action)
+        return self.preprocess(state), reward, terminal, _ 
+        # accum_reward = 0
+        # prev_state = None
+        #
+        # for _ in range(self.skip_actions):
+        #     state, reward, terminal, _ = self.env.step(action)
+        #     accum_reward += reward
+        #     if terminal:
+        #         break
+        #     prev_state = state
+        #
+        # # Takes maximum value for each pixel value over the current and previous
+        # # frame. Used to handle flickering ATARI sprites Mnih et al. 2015
+        # if self.game == 'SpaceInvaders-v0' and prev_state is not None:
+        #     s = np.maximum.reduce([state, prev_state])
+        # return self.preprocess(state), accum_reward, terminal, _
