@@ -52,7 +52,7 @@ class Agent():
             # optimizer, so will minimize the loss.
             self.train_op = optimizer.apply_gradients(grads_vars)
 
-    def build_model(self):
+    def build_model(self, h, w, channels):
           state = tf.placeholder('float32', shape=(None, h, w, channels), name='state')
           # First convolutional layer
           with tf.variable_scope('conv1'):
@@ -88,7 +88,7 @@ class Agent():
               weights_initializer=tf.contrib.layers.xavier_initializer(),
               biases_initializer=None)
 
-        return state, policy
+          return state, policy
 
     def get_policy(self, state):
         policy = self.sess.run(self.policy, {self.state: state})
@@ -96,6 +96,6 @@ class Agent():
 
     def train(self, states, actions, advantages):
         # Training
-        self.sess.run(self.train_op, feed_dict={self.state: states
-                                                self.action: actions
+        self.sess.run(self.train_op, feed_dict={self.state: states,
+                                                self.action: actions,
                                                 self.advantages: advantages})

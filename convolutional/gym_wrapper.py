@@ -14,16 +14,16 @@ class CustomGym():
 
         if game == 'SpaceInvaders-v0':
             self.action_space = [1, 2, 3]
-        elif game = 'Pong-v0':
+        elif game == 'Pong-v0':
             self.action_space = [1, 2, 3]
-        elif game = 'Breakout-v0':
+        elif game == 'Breakout-v0':
             self.action_space = [1, 4, 5]
         else:
             # Use the actions specified by open AI
             self.action_space = range(env.action_space.n)
 
-        self.action(size) = len(self.action_space)
-        self.observation_shape = self.ennv.observation_space.shape
+        self.action_size = len(self.action_space)
+        self.observation_shape = self.env.observation_space.shape
 
         self.state = None
         self.game = game
@@ -37,6 +37,8 @@ class CustomGym():
             self.state = np.repeat(s, self.num_frames, axis=3)
         else:
             self.state = np.append(s, self.state[:,:,:,:self.num_frames-1], axis=3)
+
+        return self.state
 
     def render(self):
         self.env.render()
@@ -58,6 +60,6 @@ class CustomGym():
 
         # Takes maximum value for each pixel value over the current and previous
         # frame. Used to handle flickering ATARI sprites Mnih et al. 2015
-        if self.game = 'SpaceInvaders-v0' and prev_state is not None:
+        if self.game == 'SpaceInvaders-v0' and prev_state is not None:
             s = np.maximum.reduce([state, prev_state])
-        return self.preprocess(state), accum_reward, term, _ 
+        return self.preprocess(state), accum_reward, terminal, _
