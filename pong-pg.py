@@ -9,7 +9,7 @@ batch_size = 10 # every how many episodes to do a param update?
 learning_rate = 1e-4
 gamma = 0.99 # discount factor for reward
 decay_rate = 0.99 # decay factor for RMSProp leaky sum of grad^2
-resume = False # resume from previous checkpoint?
+resume = True # resume from previous checkpoint?
 render = False
 
 # model initialization
@@ -57,7 +57,7 @@ def policy_backward(eph, epdlogp):
   """ backward pass. (eph is array of intermediate hidden states) """
   dW2 = np.dot(eph.T, epdlogp).ravel()
   dh = np.outer(epdlogp, model['W2'])
-  dh[eph <= 0] = 0 # backpro prelu
+  dh[eph <= 0] = 0 # backprop relu
   dW1 = np.dot(dh.T, epx)
   return {'W1':dW1, 'W2':dW2}
 
@@ -71,6 +71,7 @@ episode_number = 0
 count = 0
 i = 0
 while True:
+  if render: env.render()
   # preprocess the observation, set input to network to be difference image
   cur_x = prepro(observation)
   x = cur_x - prev_x if prev_x is not None else np.zeros(D)
@@ -84,6 +85,8 @@ while True:
   xs.append(x) # observation
   hs.append(h) # hidden state
   y = 1 if action == 2 else 0 # a "fake label"
+
+  # I believe this is the loss function
   dlogps.append(y - aprob) # grad that encourages the action that was taken to be taken (see http://cs231n.github.io/neural-networks-2/#losses if confused)
 
   # step the environment and get new measurements
