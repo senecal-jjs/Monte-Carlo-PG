@@ -28,28 +28,24 @@ class CustomGym():
         self.state = None
         self.game = game
 
-    def preprocess(self, observation, is_start=False):
-        grayscale = observation.astype('float32').mean(2)
-        s = imresize(grayscale, (self.width, self.height)).astype('float32') * (1.0/255.0)  #255 is the max pixel value in atari
-        s = s.reshape(1, s.shape[0], s.shape[1], 1)
-
-        if is_start or self.state is None:
-            self.state = np.repeat(s, self.num_frames, axis=3)
-        else:
-            self.state = np.append(s, self.state[:,:,:,:self.num_frames-1], axis=3)
-
-        return self.state
+    def preprocess(self, I):
+        I = I[35:195] # crop
+        I = I[::2,::2,0] # downsample by factor of 2
+        I[I == 144] = 0 # erase background (background type 1)
+        I[I == 109] = 0 # erase background (background type 2)
+        I[I != 0] = 1 # everything else (paddles, ball) just set to 1
+        return I
 
     def render(self):
         self.env.render()
 
     def reset(self):
-        return self.preprocess(self.env.reset(), is_start=True)
+        return self.preprocess(self.env.reset())
 
     def step(self, action_index):
         action = self.action_space[action_index]
         state, reward, terminal, _ = self.env.step(action)
-        return self.preprocess(state), reward, terminal, _ 
+        return self.preprocess(state), reward, terminal, _
         # accum_reward = 0
         # prev_state = None
         #
