@@ -5,7 +5,7 @@ import random
 
 
 class CustomGym():
-    def __init__(self, game, skip_actions=4, num_frames=4, width=84, height=84):
+    def __init__(self, game, skip_actions=4, num_frames=1, width=80, height=80):
         self.env = gym.make(game)
         self.num_frames = num_frames
         self.skip_actions = skip_actions
@@ -34,7 +34,7 @@ class CustomGym():
         I[I == 144] = 0 # erase background (background type 1)
         I[I == 109] = 0 # erase background (background type 2)
         I[I != 0] = 1 # everything else (paddles, ball) just set to 1
-        return I
+        return I.reshape(1, I.shape[0], I.shape[1], 1)
 
     def render(self):
         self.env.render()

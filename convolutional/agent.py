@@ -35,7 +35,7 @@ class Agent():
             # We want to do gradient ascent on the expected discounted reward.
             # The gradient of the expected discounted reward is the gradient of
             # log pi * (R), where R is the discounted reward from the
-            # given state following the policy pi. Since we want to maximise
+            # given state following the policy pi. Since we want to maximize
             # this, we define the policy loss as the negative and get tensorflow
             # to do the automatic differentiation for us.
             self.policy_loss = -tf.reduce_mean(self.log_pi_for_action * self.advantages)
@@ -46,10 +46,9 @@ class Agent():
                 placeholder = tf.placeholder(tf.float32,name=str(idx)+'_holder')
                 self.gradient_holders.append(placeholder)
 
-            self.gradients = tf.gradients(self.loss,tvars)
+            self.gradients = tf.gradients(self.policy_loss,tvars)
 
-            optimizer = tf.train.AdamOptimizer(learning_rate=lr)
-            self.train_op = optimizer.apply_gradients(zip(self.gradient_holders,tvars))
+            self.train_op = self.optimizer.apply_gradients(zip(self.gradient_holders,tvars))
 
             # # Compute the gradient of the loss with respect to all the weights,
             # # and create a list of tuples consisting of the gradient to apply to
