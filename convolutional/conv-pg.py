@@ -2,6 +2,8 @@ import tensorflow as tf
 import numpy as np
 import gym
 from collections import deque
+import os
+import csv
 
 from gym_wrapper import CustomGym
 from agent import Agent
@@ -22,17 +24,29 @@ def discount_rewards(r, gamma):
     discounted_r = (discounted_r - mean) / (std)
     return discounted_r
 
-def run(in_game):
+
+def run(in_game, restore=False, save_path=os.path.dirname(os.path.abspath(__file__))):
     env = CustomGym(game=in_game)
 
     with tf.Session() as sess:
+        # Initialize the agent
         agent = Agent(session=sess, action_size = env.action_size)
-        sess.run(tf.global_variables_initializer())
 
+        # Set up saver for checkpointing the model
+        saver = tf.train.Saver(keep_checkpoint_every_n_hours=1.0, max_to_keep=5)
+
+        # If restore is true, restore the model from the last checkpoint
+        if restore:
+            saver.restore(sess, save_path)
+        else:
+            sess.run(tf.global_variables_initializer())
+
+        # Initialize the gradient buffer
         gradBuffer = sess.run(tf.trainable_variables())
         for ix,grad in enumerate(gradBuffer):
             gradBuffer[ix] = grad * 0
 
+        # run Monte Carlo policy gradient
         # Initialize environment
         discount_factor = 0.99
         prev_state = None # used in computing the difference frame
@@ -43,7 +57,7 @@ def run(in_game):
         episode = 0
         reward_sum = 0
         running_reward = None
-        last_50_scores = deque(maxlen=50)
+        track_reward = []
 
         # Track episode history
         ep_history = []
@@ -89,15 +103,24 @@ def run(in_game):
                     feed_dict = dictionary = dict(zip(agent.gradient_holders, gradBuffer))
                     _ = sess.run(agent.train_op, feed_dict=feed_dict)
 
+                    with open('scores2.csv', 'a') as myFile:
+                        writer = csv.writer(myFile)
+                        writer.writerows(track_reward)
+                        track_reward = []
+
                 # boring book-keeping
                 ep_history = []
                 running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
                 print('resetting env. episode %d reward total was %f. running mean: %f' % (episode, reward_sum, running_reward))
+                track_reward.append([episode, reward_sum, running_reward])
                 reward_sum = 0
                 observation = env.reset() # reset env
                 prev_state = None
 
 
+
 if __name__ == '__main__':
     game = 'Pong-v0'
-    run(game)
+    save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "checkpts")
+    print("Checkpoints will be saved to {0}".format(save_path))
+    run(game, restore=False, save_path=save_path)
