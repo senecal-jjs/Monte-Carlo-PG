@@ -5,8 +5,13 @@ import random
 
 
 class CustomGym():
-    def __init__(self, game, skip_actions=4, num_frames=1, width=80, height=80):
-        self.env = gym.make(game)
+    def __init__(self, game, skip_actions=4, num_frames=1, width=80, height=80, monitor=False):
+        if monitor:
+            env = gyme.make(game)
+            self.env = Monitor(env, directory=save_path, video_callable=lambda x: True, resume=True)
+        else:
+            self.env = gym.make(game)
+            
         self.num_frames = num_frames
         self.skip_actions = skip_actions
         self.width = width
